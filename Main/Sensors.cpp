@@ -56,5 +56,5 @@ float* Sensors::getGyro(){
 }
 
 float Sensors::getAltitude(){
-  return bmp.getAltitude(SEALEVELPRESSURE_HPA);
+  return bmp.readAltitude(SEALEVELPRESSURE_HPA);
 }

@@ -17,7 +17,7 @@ class Sensors{
 
   private:  
     Adafruit_MPU6050 mpu;
-    Adafruit BMP3XX bmp;
+    Adafruit_BMP3XX bmp;
     Adafruit_Sensor *mpu_accel, *mpu_gyro;
     sensors_event_t accel, gyro;
 
