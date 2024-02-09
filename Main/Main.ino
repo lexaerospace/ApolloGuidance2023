@@ -3,7 +3,7 @@
 Sensors* sensors = new Sensors();
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   sensors->debugMPU();
   sensors->setupMPU();
   sensors->debugBMP();
@@ -12,8 +12,8 @@ void setup() {
 }
 
 void loop() {
-  sensors->getAccel();
-  sensors->getGyro();
-  sensors->getAltitude();
+  //sensors->getAccel();
+  //sensors->getGyro();
+  Serial.println(sensors->getAltitude());
   delay(100);
 }

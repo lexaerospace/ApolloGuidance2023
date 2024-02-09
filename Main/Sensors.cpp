@@ -38,10 +38,10 @@ Sensors::setupBMP(){
 float* Sensors::getAccel(){
   mpu_accel->getEvent(&accel);
   float accels[3] = {accel.acceleration.x, accel.acceleration.y, accel.acceleration.z};
-  //Serial.println("Acceleration Data:");
-  //Serial.print(accel.acceleration.x);
-  //Serial.print(","); Serial.print(accel.acceleration.y);
-  //Serial.print(","); Serial.println(accel.acceleration.z);
+  Serial.print("Acceleration Data: ");
+  Serial.print(accel.acceleration.x);
+  Serial.print(","); Serial.print(accel.acceleration.y);
+  Serial.print(","); Serial.println(accel.acceleration.z);
   return accels;
 }
 
