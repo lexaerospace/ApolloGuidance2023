@@ -58,13 +58,13 @@ Sensors::getAngle(sensors_vec_t acceleration, sensors_vec_t gyro) {
   mahonyFilter(gyro.x, gyro.y, gyro.z, acceleration.x, acceleration.y, acceleration.z);
   float roll = 180 * atan2(q0 * q1 + q2 * q3, 0.5 - (q1 * q1 + q2 * q2)) / M_PI;    
   float pitch = 180 * asin(2.0 * (q0 * q2 - q1 * q3)) / M_PI;
-  roll += 2.0f;
-  pitch += 0.20f;
+  //roll += 2.0f;
+  //pitch += 0.20f;
   //Pitch is Y-axis, Roll is Y Axis
-  Serial.print("Roll Angle ");
-  Serial.print(roll);
-  Serial.print(" Pitch Angle ");
-  Serial.println(pitch);
+  //Serial.print("Roll Angle ");
+  Serial.print(roll); Serial.print(" , ");
+  //Serial.print(" Pitch Angle ");
+  Serial.print(pitch);
 }
 
 

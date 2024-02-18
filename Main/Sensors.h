@@ -19,7 +19,7 @@ class Sensors{
     Adafruit_BMP3XX bmp;
     Adafruit_Sensor *mpu_accel, *mpu_gyro;
     sensors_event_t accel, gyro;
-    float sampleFreq = 16.0f;
+    float sampleFreq = 32.0f;
     volatile float twoKpDef = 2.0f * 5.0f;
     volatile float twoKiDef = 2.0f *0.0f;
     volatile float twoKp = twoKpDef;
