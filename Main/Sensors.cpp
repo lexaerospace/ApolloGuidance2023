@@ -74,6 +74,7 @@ float Sensors::getAltitude() {
   return bmp.readAltitude(SEALEVELPRESSURE_HPA);
 }
 
+//Taken from https://x-io.co.uk/open-source-imu-and-ahrs-algorithms/
 void Sensors::mahonyFilter(float gx, float gy, float gz, float ax, float ay, float az) {
 	float recipNorm;
 	float halfvx, halfvy, halfvz;
