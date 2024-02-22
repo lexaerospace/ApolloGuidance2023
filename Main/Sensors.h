@@ -12,7 +12,7 @@ class Sensors{
     setupBMP();
     sensors_vec_t getAcceleration(); 
     sensors_vec_t getGyro();
-    getAngle(sensors_vec_t acceleration, sensors_vec_t gyro);
+    float* getAngle(sensors_vec_t acceleration, sensors_vec_t gyro);
     float getAltitude();
   private:  
     Adafruit_MPU6050 mpu;

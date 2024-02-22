@@ -19,22 +19,14 @@ void setup() {
 
 void loop() {
   currentTime = micros();
-  // sensors->getAltitude();
   sensors_vec_t acceleration = sensors->getAcceleration();
   sensors_vec_t gyro = sensors->getGyro();
-  //Serial.print(acceleration.x);
-  // Serial.print(", "); Serial.print(acceleration.y);
-  // Serial.print(", "); Serial.println(acceleration.z);
-  // Serial.print(gyro.x);
-  // Serial.print(", "); Serial.print(gyro.y);
-  // Serial.print(", "); Serial.println(gyro.z);
-  sensors->getAngle(acceleration, gyro);
-  Serial.print(" , "); Serial.print(-180); Serial.print(" , "); Serial.print(180); Serial.print(" , ");
   currentAlt = sensors->getAltitude();
   //Serial.print(128); Serial.print(" , ");
   //Serial.print(129); Serial.print(" , ");
   Serial.println(currentAlt);
   //fThrust = FThrust(acceleration, currentAlt);
+
 }
 
 void stateMachine(){
@@ -42,6 +34,7 @@ void stateMachine(){
     case START:
       //Can't use setup() because start altitutdes get screwed up
       startAlt = sensors->getAltitude();
+      
       state = IDLE;
       break;
     case IDLE:
@@ -52,7 +45,7 @@ void stateMachine(){
       break;
     case MOTOR_ACTIVE:
       //Rocket burn time is 1000ms
-      if(currentAlt - startTime >= 1000){
+      if(currentTime - startTime >= 1000){
         state = GUIDANCE_ACTIVE;
       }
       break;

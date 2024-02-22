@@ -1,6 +1,7 @@
 #include "Sensors.h"
 #include "Vector.h"
 
+
 Sensors::debugMPU() {
   if (!mpu.begin()) {
     Serial.println("Failed to find MPU sensor.");
@@ -49,7 +50,7 @@ sensors_vec_t Sensors::getGyro() {
 }
 
 
-Sensors::getAngle(sensors_vec_t acceleration, sensors_vec_t gyro) {
+float* Sensors::getAngle(sensors_vec_t acceleration, sensors_vec_t gyro) {
   //x,y angle (IN DEGREES, without Mahony filter) 
   // float roll = 180 * atan(acceleration.y/sqrt(acceleration.x*acceleration.x+acceleration.z*acceleration.z))/ M_PI;
   // float pitch = 180 * atan(acceleration.x/sqrt(acceleration.y*acceleration.y+acceleration.z*acceleration.z))/ M_PI;
@@ -58,13 +59,13 @@ Sensors::getAngle(sensors_vec_t acceleration, sensors_vec_t gyro) {
   mahonyFilter(gyro.x, gyro.y, gyro.z, acceleration.x, acceleration.y, acceleration.z);
   float roll = 180 * atan2(q0 * q1 + q2 * q3, 0.5 - (q1 * q1 + q2 * q2)) / M_PI;    
   float pitch = 180 * asin(2.0 * (q0 * q2 - q1 * q3)) / M_PI;
-  //roll += 2.0f;
-  //pitch += 0.20f;
+  float angle[] = {roll, pitch};
   //Pitch is Y-axis, Roll is Y Axis
   //Serial.print("Roll Angle ");
-  Serial.print(roll); Serial.print(" , ");
+  //Serial.print(roll); Serial.print(" , ");
   //Serial.print(" Pitch Angle ");
-  Serial.print(pitch);
+  //Serial.print(pitch);
+  return angle;
 }
 
 
