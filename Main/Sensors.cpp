@@ -57,18 +57,17 @@ float* Sensors::getAngle(sensors_vec_t acceleration, sensors_vec_t gyro) {
 
   //x,y angle (IN DEFREES, with Mahoney filter)
   mahonyFilter(gyro.x, gyro.y, gyro.z, acceleration.x, acceleration.y, acceleration.z);
-  float roll = 180 * atan2(q0 * q1 + q2 * q3, 0.5 - (q1 * q1 + q2 * q2)) / M_PI;    
-  float pitch = 180 * asin(2.0 * (q0 * q2 - q1 * q3)) / M_PI;
-  float angle[] = {roll, pitch};
-  //Pitch is Y-axis, Roll is Y Axis
-  //Serial.print("Roll Angle ");
-  //Serial.print(roll); Serial.print(" , ");
-  //Serial.print(" Pitch Angle ");
-  //Serial.print(pitch);
+  roll = atan2(q0 * q1 + q2 * q3, 0.5 - (q1 * q1 + q2 * q2));    
+  pitch = asin(2.0 * (q0 * q2 - q1 * q3));
+  float angle[2] = {roll, pitch};
   return angle;
 }
 
-
+float Sensors::getVelocity(sensors_vec_t acceleration){
+  float AccZInertial = acceleration.x * -sin(pitch) + acceleration.y * sin(roll) * cos(pitch) + acceleration.z * cos(roll) * cos(pitch);
+  velocity += AccZInertial * 0.004;
+  return velocity;
+}
 
 
 float Sensors::getAltitude() {

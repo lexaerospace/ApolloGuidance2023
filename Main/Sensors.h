@@ -14,12 +14,15 @@ class Sensors{
     sensors_vec_t getGyro();
     float* getAngle(sensors_vec_t acceleration, sensors_vec_t gyro);
     float getAltitude();
+    float getVelocity(sensors_vec_t acceleration);
   private:  
     Adafruit_MPU6050 mpu;
     Adafruit_BMP3XX bmp;
     Adafruit_Sensor *mpu_accel, *mpu_gyro;
     sensors_event_t accel, gyro;
     float sampleFreq = 32.0f;
+    float roll, pitch;
+    float velocity = 0;
     volatile float twoKpDef = 2.0f * 5.0f;
     volatile float twoKiDef = 2.0f *0.0f;
     volatile float twoKp = twoKpDef;
