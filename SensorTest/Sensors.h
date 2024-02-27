@@ -1,31 +1,55 @@
-//#include <Adafruit_Sensor.h>
-//#include "Adafruit_BMP3XX.h"
+#include <Adafruit_Sensor.h>
+#include "Adafruit_BMP3XX.h"
 #include <Wire.h>
 #include "math.h"
 
 class Sensors{
   public:
-    void startMPU();
-    void calibrateMPU(int);
-    void lowPassFilter();
-    void getRotationRate(bool);
-    void getAcceleration();
-    void getAngle();
+    startMPU();
+    setupBMP();
+    calibrateMPU(int);
+    calibrateBMP(int);
+    lowPassFilter();
+    getRotationRate(bool);
+    getAcceleration();
+    getAngle();
+    float getAltitiude();
+    kalmanFilter1D(float, float, float, float);
+    
   private:
+    Adafruit_BMP3XX bmp;
     float rateRoll, ratePitch, rateYaw;
     float rateCaliRoll, rateCaliPitch, rateCaliYaw;
+    float startAltitude;
     float accX, accY, accZ;
     float roll, pitch;
+    float kalmanRoll = 0, kalmanPitch = 0; // inital predictions when program first starts
+    float kalmanUncertaintyRoll = 4, kalmanUncertaintyPitch = 4;
+    float kalman1DOutput[2] = {0, 0};
+    float SEALEVELPRESSURE_HPA = 1013.25;
 };
 
-void Sensors::startMPU(){
+Sensors::startMPU(){
   Wire.beginTransmission(0x68);
   Wire.write(0x6B);
   Wire.write(0x00);
   Wire.endTransmission();
 }
 
-void Sensors::calibrateMPU(int measurements){
+Sensors::setupBMP() {
+  if (!bmp.begin_I2C()) {
+    Serial.println("Failed to perform BMP sensor.");
+  }
+  if (!bmp.performReading()) {
+    Serial.println("Failed to perform BMP reading.");
+  }
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+}
+
+Sensors::calibrateMPU(int measurements){
   for(int i = 0; i < measurements; i++){
     lowPassFilter();
     getRotationRate(false);
@@ -40,7 +64,20 @@ void Sensors::calibrateMPU(int measurements){
   Serial.println("MPU Calibration Finished.");
 }
 
-void Sensors::lowPassFilter(){
+Sensors::calibrateBMP(int measurements){
+  for(int i = 0; i < measurements + 1; i++){
+    if(i == 0){ 
+      bmp.readAltitude(SEALEVELPRESSURE_HPA);
+      continue;
+    }
+    startAltitude += bmp.readAltitude(SEALEVELPRESSURE_HPA);
+    delay(1);      
+  }
+  startAltitude /= measurements;
+  Serial.println("BMP Calibration Finished.");
+}
+
+Sensors::lowPassFilter(){
   Wire.beginTransmission(0x68);
   Wire.write(0x1A);
   Wire.write(0x05);
@@ -48,7 +85,7 @@ void Sensors::lowPassFilter(){
 }
 
 
-void Sensors::getRotationRate(bool calibration){
+Sensors::getRotationRate(bool calibration){
   Wire.beginTransmission(0x68);
   Wire.write(0x1B);
   Wire.write(0x8);
@@ -73,7 +110,7 @@ void Sensors::getRotationRate(bool calibration){
   }
 }
 
-void Sensors::getAcceleration(){
+Sensors::getAcceleration(){
   Wire.beginTransmission(0x68);
   Wire.write(0x1C);
   Wire.write(0x10);
@@ -85,14 +122,40 @@ void Sensors::getAcceleration(){
   int16_t accXLSB = Wire.read() << 8| Wire.read();
   int16_t accYLSB = Wire.read() << 8| Wire.read();
   int16_t accZLSB = Wire.read() << 8| Wire.read();
-  accX = (float) accXLSB / 4096;
-  accY = (float) accYLSB / 4096;
+  accX = (float) accXLSB / 4096 - 0.01;  
+  accY = (float) accYLSB / 4096 + 0.01;
   accZ = (float) accZLSB / 4096;
+  //Serial.print(accX); Serial.print(", ");
+  //Serial.print(accY); Serial.print(", ");
+  //Serial.println(accZ);
 }
 
-void Sensors::getAngle(){
+Sensors::getAngle(){
   roll = 180 * atan(accY / sqrt(accX * accX + accZ * accZ)) / M_PI;
   pitch = 180 * -atan(accX / sqrt(accY * accY + accZ * accZ)) / M_PI;
-  Serial.print(roll); Serial.print(", ");
-  Serial.println(pitch);
+  kalmanFilter1D(kalmanRoll, kalmanUncertaintyRoll, rateRoll, roll);
+  kalmanRoll = kalman1DOutput[0];
+  kalmanUncertaintyRoll = kalman1DOutput[1];
+  kalmanFilter1D(kalmanPitch, kalmanUncertaintyPitch, ratePitch, pitch);
+  kalmanPitch = kalman1DOutput[0];
+  kalmanUncertaintyPitch = kalman1DOutput[1];
+  Serial.print(kalmanRoll); Serial.print(", ");
+  Serial.println(kalmanPitch);
+}
+
+float Sensors::getAltitiude(){
+  return (bmp.readAltitude(SEALEVELPRESSURE_HPA) - startAltitude);
+}
+
+
+
+//Right now ive set the iteration length to 0.055s set it to the time the arduino needs to do 1 loop
+Sensors::kalmanFilter1D(float state, float uncertainty, float input, float measurement){
+  state = state + 0.055 * input;
+  uncertainty = uncertainty + 0.055 * 0.055 * 4 * 4;
+  float gain = uncertainty * 1 / ( 1 * uncertainty + 3 * 3);
+  state = state + gain * (measurement - state);
+  uncertainty = (1 - gain) * uncertainty;
+  kalman1DOutput[0] = state;
+  kalman1DOutput[1] = uncertainty;
 }
