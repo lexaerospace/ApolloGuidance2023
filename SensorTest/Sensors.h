@@ -2,6 +2,9 @@
 #include "Adafruit_BMP3XX.h"
 #include <Wire.h>
 #include "math.h"
+#include "BasicLinearAlgebra.h"
+using namespace BLA;
+
 
 class Sensors{
   public:
@@ -13,8 +16,10 @@ class Sensors{
     getRotationRate(bool);
     getAcceleration();
     getAngle();
+    float getMPUVelocity();
     float getAltitiude();
     kalmanFilter1D(float, float, float, float);
+    kalmanFilter2D();
     
   private:
     Adafruit_BMP3XX bmp;
@@ -23,9 +28,18 @@ class Sensors{
     float startAltitude;
     float accX, accY, accZ;
     float roll, pitch;
+    float accZInertial;
+    float mpuVelocity;
     float kalmanRoll = 0, kalmanPitch = 0; // inital predictions when program first starts
     float kalmanUncertaintyRoll = 4, kalmanUncertaintyPitch = 4;
     float kalman1DOutput[2] = {0, 0};
+    float kalmanAltitude, kalmanVelocity;
+    BLA::Matrix<2,2> F; BLA::Matrix<2,1> G;
+    BLA::Matrix<2,2> P; BLA::Matrix<2,2> Q;
+    BLA::Matrix<2,1> S; BLA::Matrix<1,2> H;
+    BLA::Matrix<2,2> I; BLA::Matrix<1,1> Acc;
+    BLA::Matrix<2,1> K; BLA::Matrix<1,1> R;
+    BLA::Matrix<1,1> L; BLA::Matrix<1,1> M;
     float SEALEVELPRESSURE_HPA = 1013.25;
 };
 
@@ -139,8 +153,17 @@ Sensors::getAngle(){
   kalmanFilter1D(kalmanPitch, kalmanUncertaintyPitch, ratePitch, pitch);
   kalmanPitch = kalman1DOutput[0];
   kalmanUncertaintyPitch = kalman1DOutput[1];
-  Serial.print(kalmanRoll); Serial.print(", ");
-  Serial.println(kalmanPitch);
+  roll = kalmanRoll;
+  pitch = kalmanPitch - 2;
+  //Serial.print(roll); Serial.print(", ");
+  //Serial.println(pitch);
+}
+
+float Sensors::getMPUVelocity(){
+  accZInertial = -accX * sin(pitch * M_PI / 180) + accY * sin(roll * M_PI / 180) * cos(pitch * M_PI / 180) + accZ * cos(roll * M_PI / 180) * cos(pitch * M_PI / 180);
+  accZInertial = (accZInertial - 1) * 9.81 * 100; //cm/s^2
+  mpuVelocity = mpuVelocity + accZInertial * 0.055;
+  return mpuVelocity;
 }
 
 float Sensors::getAltitiude(){
@@ -158,4 +181,8 @@ Sensors::kalmanFilter1D(float state, float uncertainty, float input, float measu
   uncertainty = (1 - gain) * uncertainty;
   kalman1DOutput[0] = state;
   kalman1DOutput[1] = uncertainty;
+}
+
+Sensors::kalmanFilter2D(){
+  
 }
