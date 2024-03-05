@@ -15,17 +15,20 @@ void setup() {
   sensors->setupBMP();
   sensors->calibrateMPU(2000);
   //sensors->calibrateBMP(2000);
+  sensors->setupKalmanFilter2D();
 }
 
 void loop() {
   previousTime = currentTime;
   currentTime = micros();
   previousAlt = currentAlt;
-  currentAlt = sensors->getAltitiude();
   sensors->lowPassFilter();
   sensors->getRotationRate(true);
   sensors->getAcceleration();
   sensors->getAngle();
-  Serial.println(sensors->getMPUVelocity());
+  sensors->getMPUVelocity();
+  sensors->kalmanFilter2D();
+  Serial.print(sensors->getAltitude()); Serial.print(", "); Serial.println(sensors->getVelocity());
+  //Serial.println(currentTime - previousTime);
   delay(50);
 }

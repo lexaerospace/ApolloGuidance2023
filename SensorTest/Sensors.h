@@ -1,3 +1,5 @@
+//A lot of this code was taken from carbon aeronautics: https://github.com/CarbonAeronautics?tab=repositories
+
 #include <Adafruit_Sensor.h>
 #include "Adafruit_BMP3XX.h"
 #include <Wire.h>
@@ -17,15 +19,19 @@ class Sensors{
     getAcceleration();
     getAngle();
     float getMPUVelocity();
-    float getAltitiude();
+    float getBMPAltitude(bool);
+    //Altitude and velocity after 2D kalman filter is applied
+    float getVelocity();
+    float getAltitude();
     kalmanFilter1D(float, float, float, float);
+    setupKalmanFilter2D();
     kalmanFilter2D();
-    
-  private:
     Adafruit_BMP3XX bmp;
+    float startAltitude;
+  private:
+    
     float rateRoll, ratePitch, rateYaw;
     float rateCaliRoll, rateCaliPitch, rateCaliYaw;
-    float startAltitude;
     float accX, accY, accZ;
     float roll, pitch;
     float accZInertial;
@@ -33,6 +39,11 @@ class Sensors{
     float kalmanRoll = 0, kalmanPitch = 0; // inital predictions when program first starts
     float kalmanUncertaintyRoll = 4, kalmanUncertaintyPitch = 4;
     float kalman1DOutput[2] = {0, 0};
+    float SEALEVELPRESSURE_HPA = 1013.25;
+    uint16_t dig_T1, dig_P1;
+    int16_t  dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5;
+    int16_t  dig_P6, dig_P7, dig_P8, dig_P9; 
+    float iterationLength = 0.0612;
     float kalmanAltitude, kalmanVelocity;
     BLA::Matrix<2,2> F; BLA::Matrix<2,1> G;
     BLA::Matrix<2,2> P; BLA::Matrix<2,2> Q;
@@ -40,7 +51,6 @@ class Sensors{
     BLA::Matrix<2,2> I; BLA::Matrix<1,1> Acc;
     BLA::Matrix<2,1> K; BLA::Matrix<1,1> R;
     BLA::Matrix<1,1> L; BLA::Matrix<1,1> M;
-    float SEALEVELPRESSURE_HPA = 1013.25;
 };
 
 Sensors::startMPU(){
@@ -60,7 +70,7 @@ Sensors::setupBMP() {
   bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
   bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
-  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ); 
 }
 
 Sensors::calibrateMPU(int measurements){
@@ -79,12 +89,12 @@ Sensors::calibrateMPU(int measurements){
 }
 
 Sensors::calibrateBMP(int measurements){
-  for(int i = 0; i < measurements + 1; i++){
-    if(i == 0){ 
-      bmp.readAltitude(SEALEVELPRESSURE_HPA);
+  for(int i = 0; i < measurements + 5; i++){
+    if(i < 5){
+      getBMPAltitude(false);
       continue;
-    }
-    startAltitude += bmp.readAltitude(SEALEVELPRESSURE_HPA);
+    } 
+    startAltitude += getBMPAltitude(false);
     delay(1);      
   }
   startAltitude /= measurements;
@@ -153,29 +163,40 @@ Sensors::getAngle(){
   kalmanFilter1D(kalmanPitch, kalmanUncertaintyPitch, ratePitch, pitch);
   kalmanPitch = kalman1DOutput[0];
   kalmanUncertaintyPitch = kalman1DOutput[1];
-  roll = kalmanRoll;
-  pitch = kalmanPitch - 2;
+  //roll = kalmanRoll;
+  //pitch = kalmanPitch - 2;
   //Serial.print(roll); Serial.print(", ");
   //Serial.println(pitch);
 }
 
 float Sensors::getMPUVelocity(){
   accZInertial = -accX * sin(pitch * M_PI / 180) + accY * sin(roll * M_PI / 180) * cos(pitch * M_PI / 180) + accZ * cos(roll * M_PI / 180) * cos(pitch * M_PI / 180);
-  accZInertial = (accZInertial - 1) * 9.81 * 100; //cm/s^2
-  mpuVelocity = mpuVelocity + accZInertial * 0.055;
+  accZInertial = (accZInertial - 1) * 9.81; //cm/s^2
+  mpuVelocity = mpuVelocity + accZInertial * iterationLength;
   return mpuVelocity;
 }
 
-float Sensors::getAltitiude(){
-  return (bmp.readAltitude(SEALEVELPRESSURE_HPA) - startAltitude);
+//in centimeters
+float Sensors::getBMPAltitude(bool calibration){
+  float alt = bmp.readAltitude(SEALEVELPRESSURE_HPA);
+  if(calibration){
+    alt -= startAltitude;    
+  }
+  return alt;
 }
 
+float Sensors::getAltitude(){
+  return kalmanAltitude;
+}
 
+float Sensors::getVelocity(){
+  return kalmanVelocity;
+}
 
 //Right now ive set the iteration length to 0.055s set it to the time the arduino needs to do 1 loop
 Sensors::kalmanFilter1D(float state, float uncertainty, float input, float measurement){
-  state = state + 0.055 * input;
-  uncertainty = uncertainty + 0.055 * 0.055 * 4 * 4;
+  state = state + iterationLength * input;
+  uncertainty = uncertainty + iterationLength * iterationLength * 4 * 4;
   float gain = uncertainty * 1 / ( 1 * uncertainty + 3 * 3);
   state = state + gain * (measurement - state);
   uncertainty = (1 - gain) * uncertainty;
@@ -183,6 +204,27 @@ Sensors::kalmanFilter1D(float state, float uncertainty, float input, float measu
   kalman1DOutput[1] = uncertainty;
 }
 
+Sensors::setupKalmanFilter2D(){
+  F = {1, iterationLength, 0, 1};
+  G = {0.5 * iterationLength * iterationLength, iterationLength};
+  H = {1, 0};
+  I = {1, 0, 0, 1};
+  Q = G * ~G * 10 * 10;
+  R = {30 * 30};
+  P = {0, 0, 0, 0};
+  S = {0, 0};      
+}
+
+
 Sensors::kalmanFilter2D(){
-  
+  Acc = {accZInertial};
+  S = F * S + G * Acc;
+  P = F * P * ~F + Q;
+  L = H * P * ~H + R;
+  K = P * ~H * Invert(L);
+  M = {getBMPAltitude(true)};
+  S = S + K * (M - H * S);
+  kalmanAltitude = S(0, 0);
+  kalmanVelocity = S(1, 0);
+  P = (I - K * H) * P;
 }
