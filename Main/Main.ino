@@ -1,6 +1,8 @@
 #include "Sensors.h"
+#include "Motors.h"
 
 Sensors* sensors = new Sensors();
+Motors* motors = new Motors();
 enum stateMachine {START, IDLE, MOTOR_ACTIVE, GUIDANCE_ACTIVE, APOGEE, DESCENT};
 stateMachine state;
 float startAlt = 0, currentAlt = 0;

@@ -1,6 +1,4 @@
 #include "Sensors.h"
-#include "Vector.h"
-
 
 Sensors::debugMPU() {
   if (!mpu.begin()) {
