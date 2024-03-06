@@ -7,26 +7,27 @@ enum stateMachine {START, IDLE, MOTOR_ACTIVE, GUIDANCE_ACTIVE, APOGEE, DESCENT};
 stateMachine state;
 float startAlt = 0, currentAlt = 0;
 unsigned long startTime = 0, previousTime = 0, currentTime = 0;
-float velocity;
+float currentVelocity;
 float thrust;
 void setup() {
   Serial.begin(9600);
-  sensors->debugMPU();
-  sensors->setupMPU();
-  sensors->debugBMP();
+  Wire.setClock(400000);
+  Wire.begin();
+  delay(250);
+  sensors->startMPU();
   sensors->setupBMP();
+  sensors->calibrateMPU(2000);
+  sensors->setupKalmanFilter2D();
   state = IDLE;
-  delay(100);
 }
 
 void loop() {
+  previousTime = currentTime;
   currentTime = micros();
-  sensors_vec_t acceleration = sensors->getAcceleration();
-  sensors_vec_t gyro = sensors->getGyro();
+  sensors->prepareMeasurements();
   currentAlt = sensors->getAltitude();
-  //Serial.print(128); Serial.print(" , ");
-  //Serial.print(129); Serial.print(" , ");
-  Serial.println(currentAlt);
+  currentVelocity = sensors->getVelocity();
+  Serial.print(currentAlt); Serial.print(", "); Serial.println(currentVelocity); //Serial.println(motors->FThrust(currentVelocity, currentAlt));
   //fThrust = FThrust(acceleration, currentAlt);
 
 }
@@ -36,7 +37,6 @@ void stateMachine(){
     case START:
       //Can't use setup() because start altitutdes get screwed up
       startAlt = sensors->getAltitude();
-      
       state = IDLE;
       break;
     case IDLE:
@@ -52,24 +52,12 @@ void stateMachine(){
       }
       break;
     case GUIDANCE_ACTIVE:
-      thrust = FThrust(velocity, currentAlt);
+      thrust = motors->FThrust(currentVelocity, currentAlt);
       break;
     case APOGEE:
       break;
     case DESCENT:
       break;
   }
-}
-
-float FThrust(float v, float hi) {
-  float m = 421.5;
-  float g = 9.8;
-  float hf = 249.94;
-  float vf = 0;
-  float p = 1.225; // air density
-  float A = 57.951; // reference area
-  float CDrag = 0.7028363376417; // drag coefficient
-  float F = m * v*v - m * g - (p * v*v * CDrag * A) / 2;
-  return F;
 }
 

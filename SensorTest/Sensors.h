@@ -10,10 +10,15 @@ using namespace BLA;
 
 class Sensors{
   public:
+    prepareMeasurements();
+    float getVelocity();
+    float getAltitude();
     startMPU();
     setupBMP();
     calibrateMPU(int);
     calibrateBMP(int);
+    setupKalmanFilter2D();
+  private:
     lowPassFilter();
     getRotationRate(bool);
     getAcceleration();
@@ -21,15 +26,11 @@ class Sensors{
     float getMPUVelocity();
     float getBMPAltitude(bool);
     //Altitude and velocity after 2D kalman filter is applied
-    float getVelocity();
-    float getAltitude();
+    
     kalmanFilter1D(float, float, float, float);
-    setupKalmanFilter2D();
     kalmanFilter2D();
     Adafruit_BMP3XX bmp;
     float startAltitude;
-  private:
-    
     float rateRoll, ratePitch, rateYaw;
     float rateCaliRoll, rateCaliPitch, rateCaliYaw;
     float accX, accY, accZ;
@@ -163,8 +164,8 @@ Sensors::getAngle(){
   kalmanFilter1D(kalmanPitch, kalmanUncertaintyPitch, ratePitch, pitch);
   kalmanPitch = kalman1DOutput[0];
   kalmanUncertaintyPitch = kalman1DOutput[1];
-  //roll = kalmanRoll;
-  //pitch = kalmanPitch - 2;
+  roll = kalmanRoll;
+  pitch = kalmanPitch - 2;
   //Serial.print(roll); Serial.print(", ");
   //Serial.println(pitch);
 }
@@ -227,4 +228,13 @@ Sensors::kalmanFilter2D(){
   kalmanAltitude = S(0, 0);
   kalmanVelocity = S(1, 0);
   P = (I - K * H) * P;
+}
+
+Sensors::prepareMeasurements(){
+  lowPassFilter();
+  getRotationRate(true);
+  getAcceleration();
+  getAngle();
+  getMPUVelocity();
+  kalmanFilter2D();
 }
