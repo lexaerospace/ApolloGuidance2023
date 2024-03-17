@@ -18,6 +18,7 @@ void setup() {
   sensors->setupBMP();
   sensors->calibrateMPU(2000);
   sensors->setupKalmanFilter2D();
+  motors->calibrateMotors();
   state = IDLE;
 }
 
@@ -27,7 +28,10 @@ void loop() {
   sensors->prepareMeasurements();
   currentAlt = sensors->getAltitude();
   currentVelocity = sensors->getVelocity();
-  Serial.print(currentAlt); Serial.print(", "); Serial.println(currentVelocity); //Serial.println(motors->FThrust(currentVelocity, currentAlt));
+  //Serial.print(currentAlt); Serial.print(", "); Serial.println(currentVelocity); Serial.println(motors->FThrust(currentVelocity, currentAlt));
+  float thrust = motors->FThrust(70, 100);
+  //Serial.println(thrust);
+  motors->runMotors(1200);
   //fThrust = FThrust(acceleration, currentAlt);
 
 }
