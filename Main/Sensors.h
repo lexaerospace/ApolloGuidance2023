@@ -41,9 +41,9 @@ class Sensors{
     float kalmanUncertaintyRoll = 4, kalmanUncertaintyPitch = 4;
     float kalman1DOutput[2] = {0, 0};
     float SEALEVELPRESSURE_HPA = 1013.25;
-    uint16_t dig_T1, dig_P1;
-    int16_t  dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5;
-    int16_t  dig_P6, dig_P7, dig_P8, dig_P9; 
+    // uint16_t dig_T1, dig_P1;
+    // int16_t  dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5;
+    // int16_t  dig_P6, dig_P7, dig_P8, dig_P9; 
     float iterationLength = 0.0612;
     float kalmanAltitude, kalmanVelocity;
     BLA::Matrix<2,2> F; BLA::Matrix<2,1> G;

@@ -3,12 +3,12 @@
 
 Sensors* sensors = new Sensors();
 Motors* motors = new Motors();
-enum stateMachine {START, IDLE, MOTOR_ACTIVE, GUIDANCE_ACTIVE, APOGEE, DESCENT};
+enum stateMachine {START, IDLE, MOTOR_ACTIVE, GUIDANCE_ACTIVE, DESCENT};
 stateMachine state;
 float startAlt = 0, currentAlt = 0;
 unsigned long startTime = 0, previousTime = 0, currentTime = 0;
 float currentVelocity;
-float thrust;
+
 void setup() {
   Serial.begin(9600);
   Wire.setClock(400000);
@@ -19,6 +19,7 @@ void setup() {
   sensors->calibrateMPU(2000);
   sensors->setupKalmanFilter2D();
   motors->calibrateMotors();
+  motors->testMotors();
   state = IDLE;
 }
 
@@ -29,9 +30,9 @@ void loop() {
   currentAlt = sensors->getAltitude();
   currentVelocity = sensors->getVelocity();
   //Serial.print(currentAlt); Serial.print(", "); Serial.println(currentVelocity); Serial.println(motors->FThrust(currentVelocity, currentAlt));
-  float thrust = motors->FThrust(70, 100);
+  // float thrust = motors->FThrust(70, 100);
   //Serial.println(thrust);
-  motors->runMotors(1200);
+  // motors->runMotors(1200);
   //fThrust = FThrust(acceleration, currentAlt);
 
 }
@@ -44,7 +45,8 @@ void stateMachine(){
       state = IDLE;
       break;
     case IDLE:
-      if(currentAlt - startAlt >= 1){
+      //set vel to some threshold (set to 5m/s for now)
+      if(currentVelocity >= 5){
         startTime = currentTime;
         state = MOTOR_ACTIVE;
       }
@@ -53,14 +55,16 @@ void stateMachine(){
       //Rocket burn time is 1000ms
       if(currentTime - startTime >= 1000){
         state = GUIDANCE_ACTIVE;
+        motors->releaseGuidance();
       }
       break;
     case GUIDANCE_ACTIVE:
-      thrust = motors->FThrust(currentVelocity, currentAlt);
-      break;
-    case APOGEE:
+      float thrust = motors->FThrust(sensors->getVelocity(), sensors->getAltitude());
+      int pulse = motors->getPulseWidth(thrust);
+      runMotors(pulse);
       break;
     case DESCENT:
+
       break;
   }
 }

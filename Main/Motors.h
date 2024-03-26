@@ -5,9 +5,10 @@ class Motors{
     calibrateMotors();
     releaseGuidance();
     float FThrust(float, float);
-    float getPulseWidth(float);
+    int getPulseWidth(float);
     runMotor(int, int);
     runMotors(int);
+    testMotors();
   private:
     Servo motor1, motor2, motor3, motor4;
     Servo motors[4] = {motor1, motor2, motor3, motor4};
@@ -15,10 +16,10 @@ class Motors{
 };
 
 Motors::calibrateMotors(){
-  motors[1].attach(5, 1000, 2000);
-  motors[2].attach(6, 1000, 2000);
-  motors[3].attach(9, 1000, 2000);
-  motors[4].attach(10, 1000, 2000);
+  motors[0].attach(5, 1000, 2000);
+  motors[1].attach(6, 1000, 2000);
+  motors[2].attach(9, 1000, 2000);
+  motors[3].attach(10, 1000, 2000);
   servo.attach(A0);
   for(int i = 0; i < 4; i++)
     motors[i].writeMicroseconds(1000);
@@ -27,7 +28,7 @@ Motors::calibrateMotors(){
 }
 
 
-//THRUST TO PULSE WIDTH EQUATION (g to ms): y = 25.84 * (x / 9.8 * 1000) + 893.2 
+
 Motors::runMotor(int motor, int pulse){
   motors[motor].writeMicroseconds(pulse);
 }
@@ -37,6 +38,12 @@ Motors::runMotors(int pulse){
     motors[i].writeMicroseconds(pulse);
   }
   
+}
+
+Motors::testMotors(){
+  runMotors(1200);
+  delay(5000);
+  runMotors(1000);
 }
 
 //i put 90 for now put in the necessary angle to release the guidance
@@ -60,7 +67,18 @@ float Motors::FThrust(float v, float hi) {
 }
 
 //turns the thrust into a pulsewidth
-float Motors::getPulseWidth(float thrust){
 
+//WEBSITE DATA THRUST TO PULSE WIDTH EQUATION (grams to ms): pulse = (thrust + 60.329) / 0.0584
+//OUR DATA THRUST TO PULSE WIDTH EQUATION (grams to ms): pulse = (thrust + 31.180) / 0.0358
+int Motors::getPulseWidth(float thrust){
+  //website data
+  int websitePulse = (int) ((thrust + 60.329) / 0.0584);
+  int experimentPulse = (int) ((thrust + 31.180) / 0.0358);
+  if(expirementPulse > 2000){
+    return 2000;
+  } else if(experimentPulse < 1000){
+    return 1000;
+  }
+  return experimentPulse;
 }
 
